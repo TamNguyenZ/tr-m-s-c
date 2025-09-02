@@ -9,5 +9,19 @@ build_script:
       Set-LocalUser -Name "Administrator" -Password $password
       Enable-LocalUser -Name "Administrator"
 
-      Write-Host "🚀 Mở tunnel Pinggy SSH (RDP 3389)..."
-      & "C:\Program Files\Git\usr\bin\ssh.exe" -p 443 -R0:localhost:3389 -o StrictHostKeyChecking=no -o ServerAliveInterval=30 lVuaQjAzw82+tcp@free.pinggy.io
+      Write-Host "🌐 Cài ngrok..."
+      Invoke-WebRequest https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-windows-amd64.zip -OutFile ngrok.zip
+      Expand-Archive ngrok.zip -DestinationPath C:\ngrok
+      $env:Path += ";C:\ngrok"
+
+      Write-Host "🔑 Đăng nhập ngrok..."
+      & C:\ngrok\ngrok.exe config add-authtoken 2ww60Uf9irvEr2KylKE2P5ASMGw_2Mer1U56aKeQsqVK5Mczs
+
+      Write-Host "🚀 Mở tunnel RDP (3389)..."
+      Start-Process -NoNewWindow -FilePath "C:\ngrok\ngrok.exe" -ArgumentList "tcp 3389"
+
+      Write-Host "⏳ Giữ job chạy 24/24..."
+      for ($i=0; $i -lt 1440; $i++) {
+        Start-Sleep -Seconds 60
+        Write-Host "Đang giữ: $i phút (tổng $($i/60) giờ)"
+      }
