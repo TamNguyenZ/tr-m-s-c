@@ -1,4 +1,5 @@
 version: 1.0.{build}
+
 image: Visual Studio 2019
 
 init:
@@ -7,18 +8,9 @@ init:
 
 install:
   - ps: |
-      Write-Host "Cài đặt Pinggy..."
-      Invoke-WebRequest -Uri "https://raw.githubusercontent.com/kha7iq/pinggy/main/install.ps1" -OutFile "install.ps1"
-      powershell -ExecutionPolicy Bypass -File install.ps1
-
-      Write-Host "Thử mở tunnel trên cổng 3389 (RDP)..."
-      try {
-        Start-Process -NoNewWindow -FilePath "pinggy.exe" -ArgumentList "tcp -p 3389"
-        Write-Host "Pinggy đang chạy trên cổng 3389."
-      } catch {
-        Write-Host "Cổng 3389 lỗi, fallback sang 5900 (VNC)..."
-        Start-Process -NoNewWindow -FilePath "pinggy.exe" -ArgumentList "tcp -p 5900"
-      }
+      Write-Host "Tải Pinggy..."
+      Invoke-WebRequest -Uri "https://github.com/kha7iq/pinggy/releases/latest/download/pinggy.exe" -OutFile "pinggy.exe"
+      Write-Host "Pinggy tải xong."
 
 build_script:
   - ps: |
@@ -27,13 +19,17 @@ build_script:
       Set-LocalUser -Name "Administrator" -Password $password
       Enable-LocalUser -Name "Administrator"
 
-      Write-Host "Thông tin cấu hình VM:"
-      systeminfo | findstr /C:"Total Physical Memory"
-      wmic cpu get Name,NumberOfCores,NumberOfLogicalProcessors
-      Get-PSDrive C
+      Write-Host "Mở tunnel Pinggy RDP (3389)..."
+      try {
+        Start-Process -NoNewWindow -FilePath "pinggy.exe" -ArgumentList "tcp -p 3389"
+        Write-Host "Pinggy đang chạy trên cổng 3389."
+      } catch {
+        Write-Host "3389 lỗi → thử 5900 (VNC)..."
+        Start-Process -NoNewWindow -FilePath "pinggy.exe" -ArgumentList "tcp -p 5900"
+      }
 
-      Write-Host "Giữ kết nối..."
-      for ($i=0; $i -lt 3600; $i++) {
+      Write-Host "Giữ kết nối (chạy vòng lặp)..."
+      for ($i=0; $i -lt 60; $i++) {
         Start-Sleep -Seconds 60
-        Write-Host "Đang chạy: $i phút"
+        Write-Host "Đang giữ: $i phút"
       }
