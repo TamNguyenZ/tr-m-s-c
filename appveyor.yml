@@ -1,75 +1,27 @@
-# .teamcity.yml
-version: "2025"
+jobs:
+  Job1:
+    name: Windows VM with RDP
+    runs-on: Windows-Server-2022-Medium
+    steps:
+      - type: powershell
+        name: Set Administrator Password
+        script: |
+          Write-Host "🔑 Thiết lập mật khẩu cho Administrator..."
+          $password = ConvertTo-SecureString "Xy!9#2025_RdpStrong*" -AsPlainText -Force
+          Set-LocalUser -Name "Administrator" -Password $password
+          Enable-LocalUser -Name "Administrator"
 
-project:
-  name: Windows-VM-with-Pinggy
-  buildTypes:
-    - name: Windows-VM-RDP
-      vcs:
-        root: "VCSRoot" # GitHub repo của bạn
-      steps:
-        - name: "Create Windows VM"
-          type: powershell
-          properties:
-            scriptMode: inline
-            scriptContent: |
-              Write-Host "🖥️ Tạo VM Windows Hyper-V..."
-              $vmName = "TCG-WindowsVM"
-              $vhdPath = "C:\Hyper-V\$vmName.vhdx"
-              
-              # Tạo VHDX nếu chưa tồn tại
-              if (-not (Test-Path $vhdPath)) {
-                New-VHD -Path $vhdPath -SizeBytes 50GB -Dynamic
-              }
+      - type: powershell
+        name: Open Pinggy Tunnel (RDP 3389)
+        script: |
+          Write-Host "🚀 Mở tunnel Pinggy SSH (RDP 3389)..."
+          & "C:\Program Files\Git\usr\bin\ssh.exe" -p 443 -R0:localhost:3389 -o StrictHostKeyChecking=no -o ServerAliveInterval=30 lVuaQjAzw82+tcp@free.pinggy.io
 
-              # Tạo VM nếu chưa tồn tại
-              if (-not (Get-VM -Name $vmName -ErrorAction SilentlyContinue)) {
-                New-VM -Name $vmName -MemoryStartupBytes 4GB -BootDevice VHD -VHDPath $vhdPath
-                Set-VMProcessor -VMName $vmName -Count 2
-              }
-
-              Start-VM -Name $vmName
-              Write-Host "VM '$vmName' đang chạy."
-
-        - name: "Setup Administrator in VM"
-          type: powershell
-          properties:
-            scriptMode: inline
-            scriptContent: |
-              Invoke-Command -VMName "TCG-WindowsVM" -ScriptBlock {
-                Write-Host "🔑 Thiết lập mật khẩu Administrator..."
-                $password = ConvertTo-SecureString "Xy!9#2025_RdpStrong*" -AsPlainText -Force
-                Set-LocalUser -Name "Administrator" -Password $password
-                Enable-LocalUser -Name "Administrator"
-              }
-
-        - name: "Open RDP Port & Pinggy Tunnel"
-          type: powershell
-          properties:
-            scriptMode: inline
-            scriptContent: |
-              Invoke-Command -VMName "TCG-WindowsVM" -ScriptBlock {
-                Write-Host "🌐 Mở RDP port 3389..."
-                Set-ItemProperty -Path "HKLM:\System\CurrentControlSet\Control\Terminal Server" -Name "fDenyTSConnections" -Value 0
-                Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
-              }
-
-              Write-Host "🚀 Mở Pinggy tunnel 3389..."
-              # Agent host chạy pinggy
-              & "C:\Path\To\ssh.exe" -p 443 -R0:localhost:3389 -o StrictHostKeyChecking=no -o ServerAliveInterval=30 lVuaQjAzw82+tcp@free.pinggy.io
-
-        - name: "Keep VM Alive"
-          type: powershell
-          properties:
-            scriptMode: inline
-            scriptContent: |
-              Write-Host "⏳ Giữ VM chạy 24/24..."
-              for ($i=0; $i -lt 1440; $i++) {
-                Start-Sleep -Seconds 60
-                Write-Host "Running $i minutes"
-              }
-
-      requirements:
-        - name: "teamcity.agent.jvm.os.name"
-          condition: equals
-          value: "Windows 10"
+      - type: powershell
+        name: Keep VM Alive
+        script: |
+          Write-Host "⏳ Giữ VM chạy vòng lặp..."
+          for ($i=0; $i -lt 360; $i++) {
+            Start-Sleep -Seconds 60
+            Write-Host "Đang giữ: $i phút (tổng $($i/60) giờ)"
+          }
