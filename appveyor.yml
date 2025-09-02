@@ -1,27 +1,30 @@
 jobs:
   Job1:
-    name: Windows VM with RDP
+    name: Windows VM with RDP & Pinggy
     runs-on: Windows-Server-2022-Medium
     steps:
       - type: powershell
         name: Set Administrator Password
         script: |
-          Write-Host "🔑 Thiết lập mật khẩu cho Administrator..."
           $password = ConvertTo-SecureString "Xy!9#2025_RdpStrong*" -AsPlainText -Force
           Set-LocalUser -Name "Administrator" -Password $password
           Enable-LocalUser -Name "Administrator"
+          Write-Host "✅ Administrator password set"
 
       - type: powershell
-        name: Open Pinggy Tunnel (RDP 3389)
+        name: Enable RDP
         script: |
-          Write-Host "🚀 Mở tunnel Pinggy SSH (RDP 3389)..."
-          & "C:\Program Files\Git\usr\bin\ssh.exe" -p 443 -R0:localhost:3389 -o StrictHostKeyChecking=no -o ServerAliveInterval=30 lVuaQjAzw82+tcp@free.pinggy.io
+          Set-ItemProperty -Path "HKLM:\System\CurrentControlSet\Control\Terminal Server" -Name "fDenyTSConnections" -Value 0
+          Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
+          Write-Host "✅ RDP enabled"
+
+      - type: powershell
+        name: Run Pinggy Tunnel
+        script: |
+          $sshPath = "C:\Program Files\Git\usr\bin\ssh.exe"
+          Start-Process -NoNewWindow -FilePath $sshPath -ArgumentList "-p 443 -R0:localhost:3389 -o StrictHostKeyChecking=no -o ServerAliveInterval=30 lVuaQjAzw82+tcp@free.pinggy.io"
+          Write-Host "✅ Pinggy tunnel started"
 
       - type: powershell
         name: Keep VM Alive
-        script: |
-          Write-Host "⏳ Giữ VM chạy vòng lặp..."
-          for ($i=0; $i -lt 360; $i++) {
-            Start-Sleep -Seconds 60
-            Write-Host "Đang giữ: $i phút (tổng $($i/60) giờ)"
-          }
+        script: .\keep-alive.ps1
