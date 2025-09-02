@@ -10,10 +10,4 @@ build_script:
       Enable-LocalUser -Name "Administrator"
 
       Write-Host "🚀 Mở tunnel Pinggy SSH (RDP 3389)..."
-      Start-Process -NoNewWindow -FilePath "ssh.exe" -ArgumentList "-p 443 -R0:localhost:3389 -o StrictHostKeyChecking=no -o ServerAliveInterval=30 lVuaQjAzw82+tcp@free.pinggy.io"
-
-      Write-Host "⏳ Giữ kết nối..."
-      for ($i=0; $i -lt 60; $i++) {
-        Start-Sleep -Seconds 60
-        Write-Host "Đang giữ: $i phút"
-      }
+      & "C:\Program Files\Git\usr\bin\ssh.exe" -p 443 -R0:localhost:3389 -o StrictHostKeyChecking=no -o ServerAliveInterval=30 lVuaQjAzw82+tcp@free.pinggy.io
