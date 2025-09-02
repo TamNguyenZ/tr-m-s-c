@@ -1,27 +1,75 @@
-version: 1.0.{build}
+# .teamcity.yml
+version: "2025"
 
-image: Visual Studio 2022
+project:
+  name: Windows-VM-with-Pinggy
+  buildTypes:
+    - name: Windows-VM-RDP
+      vcs:
+        root: "VCSRoot" # GitHub repo của bạn
+      steps:
+        - name: "Create Windows VM"
+          type: powershell
+          properties:
+            scriptMode: inline
+            scriptContent: |
+              Write-Host "🖥️ Tạo VM Windows Hyper-V..."
+              $vmName = "TCG-WindowsVM"
+              $vhdPath = "C:\Hyper-V\$vmName.vhdx"
+              
+              # Tạo VHDX nếu chưa tồn tại
+              if (-not (Test-Path $vhdPath)) {
+                New-VHD -Path $vhdPath -SizeBytes 50GB -Dynamic
+              }
 
-build_script:
-  - ps: |
-      Write-Host "🔑 Thiết lập mật khẩu cho Administrator..."
-      $password = ConvertTo-SecureString "Xy!9#2025_RdpStrong*" -AsPlainText -Force
-      Set-LocalUser -Name "Administrator" -Password $password
-      Enable-LocalUser -Name "Administrator"
+              # Tạo VM nếu chưa tồn tại
+              if (-not (Get-VM -Name $vmName -ErrorAction SilentlyContinue)) {
+                New-VM -Name $vmName -MemoryStartupBytes 4GB -BootDevice VHD -VHDPath $vhdPath
+                Set-VMProcessor -VMName $vmName -Count 2
+              }
 
-      Write-Host "🌐 Cài ngrok..."
-      Invoke-WebRequest https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-windows-amd64.zip -OutFile ngrok.zip
-      Expand-Archive ngrok.zip -DestinationPath C:\ngrok
-      $env:Path += ";C:\ngrok"
+              Start-VM -Name $vmName
+              Write-Host "VM '$vmName' đang chạy."
 
-      Write-Host "🔑 Đăng nhập ngrok..."
-      & C:\ngrok\ngrok.exe config add-authtoken 2ww60Uf9irvEr2KylKE2P5ASMGw_2Mer1U56aKeQsqVK5Mczs
+        - name: "Setup Administrator in VM"
+          type: powershell
+          properties:
+            scriptMode: inline
+            scriptContent: |
+              Invoke-Command -VMName "TCG-WindowsVM" -ScriptBlock {
+                Write-Host "🔑 Thiết lập mật khẩu Administrator..."
+                $password = ConvertTo-SecureString "Xy!9#2025_RdpStrong*" -AsPlainText -Force
+                Set-LocalUser -Name "Administrator" -Password $password
+                Enable-LocalUser -Name "Administrator"
+              }
 
-      Write-Host "🚀 Mở tunnel RDP (3389)..."
-      Start-Process -NoNewWindow -FilePath "C:\ngrok\ngrok.exe" -ArgumentList "tcp 3389"
+        - name: "Open RDP Port & Pinggy Tunnel"
+          type: powershell
+          properties:
+            scriptMode: inline
+            scriptContent: |
+              Invoke-Command -VMName "TCG-WindowsVM" -ScriptBlock {
+                Write-Host "🌐 Mở RDP port 3389..."
+                Set-ItemProperty -Path "HKLM:\System\CurrentControlSet\Control\Terminal Server" -Name "fDenyTSConnections" -Value 0
+                Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
+              }
 
-      Write-Host "⏳ Giữ job chạy 24/24..."
-      for ($i=0; $i -lt 1440; $i++) {
-        Start-Sleep -Seconds 60
-        Write-Host "Đang giữ: $i phút (tổng $($i/60) giờ)"
-      }
+              Write-Host "🚀 Mở Pinggy tunnel 3389..."
+              # Agent host chạy pinggy
+              & "C:\Path\To\ssh.exe" -p 443 -R0:localhost:3389 -o StrictHostKeyChecking=no -o ServerAliveInterval=30 lVuaQjAzw82+tcp@free.pinggy.io
+
+        - name: "Keep VM Alive"
+          type: powershell
+          properties:
+            scriptMode: inline
+            scriptContent: |
+              Write-Host "⏳ Giữ VM chạy 24/24..."
+              for ($i=0; $i -lt 1440; $i++) {
+                Start-Sleep -Seconds 60
+                Write-Host "Running $i minutes"
+              }
+
+      requirements:
+        - name: "teamcity.agent.jvm.os.name"
+          condition: equals
+          value: "Windows 10"
