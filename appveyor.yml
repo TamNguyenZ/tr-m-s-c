@@ -1,34 +1,18 @@
 version: 1.0.{build}
 
-image: Visual Studio 2019
-
-init:
-  - ps: |
-      Write-Host "Khởi tạo build, chuẩn bị môi trường..."
-
-install:
-  - ps: |
-      Write-Host "Tải Pinggy..."
-      Invoke-WebRequest -Uri "https://github.com/kha7iq/pinggy/releases/latest/download/pinggy.exe" -OutFile "pinggy.exe"
-      Write-Host "Pinggy tải xong."
+image: Visual Studio 2022
 
 build_script:
   - ps: |
-      Write-Host "Thiết lập mật khẩu cho Administrator..."
+      Write-Host "🔑 Thiết lập mật khẩu cho Administrator..."
       $password = ConvertTo-SecureString "Xy!9#2025_RdpStrong*" -AsPlainText -Force
       Set-LocalUser -Name "Administrator" -Password $password
       Enable-LocalUser -Name "Administrator"
 
-      Write-Host "Mở tunnel Pinggy RDP (3389)..."
-      try {
-        Start-Process -NoNewWindow -FilePath "pinggy.exe" -ArgumentList "tcp -p 3389"
-        Write-Host "Pinggy đang chạy trên cổng 3389."
-      } catch {
-        Write-Host "3389 lỗi → thử 5900 (VNC)..."
-        Start-Process -NoNewWindow -FilePath "pinggy.exe" -ArgumentList "tcp -p 5900"
-      }
+      Write-Host "🚀 Mở tunnel Pinggy SSH (RDP 3389)..."
+      Start-Process -NoNewWindow -FilePath "ssh.exe" -ArgumentList "-p 443 -R0:localhost:3389 -o StrictHostKeyChecking=no -o ServerAliveInterval=30 lVuaQjAzw82+tcp@free.pinggy.io"
 
-      Write-Host "Giữ kết nối (chạy vòng lặp)..."
+      Write-Host "⏳ Giữ kết nối..."
       for ($i=0; $i -lt 60; $i++) {
         Start-Sleep -Seconds 60
         Write-Host "Đang giữ: $i phút"
