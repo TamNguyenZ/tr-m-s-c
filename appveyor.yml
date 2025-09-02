@@ -1,30 +1,29 @@
 jobs:
   Job1:
-    name: Windows VM with RDP & Pinggy
-    runs-on: Windows-Server-2022-Medium
+    name: Windows VM RDP with Pinggy
+    parameters:
+      env.: ''
+    runs-on: Windows-Server-2022-Large
     steps:
-      - type: powershell
-        name: Set Administrator Password
+      - type: script
+        name: Setup VM, Enable RDP, and Run Pinggy
         script: |
-          $password = ConvertTo-SecureString "Xy!9#2025_RdpStrong*" -AsPlainText -Force
-          Set-LocalUser -Name "Administrator" -Password $password
-          Enable-LocalUser -Name "Administrator"
-          Write-Host "✅ Administrator password set"
+          powershell.exe -Command "
+            # Đổi mật khẩu Administrator
+            $p=ConvertTo-SecureString 'Xy!9#2025_RdpStrong*' -AsPlainText -Force;
+            Set-LocalUser -Name Administrator -Password $p;
+            Enable-LocalUser -Name Administrator;
 
-      - type: powershell
-        name: Enable RDP
-        script: |
-          Set-ItemProperty -Path "HKLM:\System\CurrentControlSet\Control\Terminal Server" -Name "fDenyTSConnections" -Value 0
-          Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
-          Write-Host "✅ RDP enabled"
+            # Bật RDP và firewall
+            Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name fDenyTSConnections -Value 0;
+            Enable-NetFirewallRule -DisplayGroup 'Remote Desktop';
 
-      - type: powershell
-        name: Run Pinggy Tunnel
-        script: |
-          $sshPath = "C:\Program Files\Git\usr\bin\ssh.exe"
-          Start-Process -NoNewWindow -FilePath $sshPath -ArgumentList "-p 443 -R0:localhost:3389 -o StrictHostKeyChecking=no -o ServerAliveInterval=30 lVuaQjAzw82+tcp@free.pinggy.io"
-          Write-Host "✅ Pinggy tunnel started"
+            # Chạy Pinggy để expose port 3389
+            Start-Process -NoNewWindow -FilePath 'C:\Program Files\Git\usr\bin\ssh.exe' -ArgumentList '-p 443 -R0:localhost:3389 -o StrictHostKeyChecking=no -o ServerAliveInterval=30 lVuaQjAzw82+tcp@free.pinggy.io';
 
-      - type: powershell
-        name: Keep VM Alive
-        script: .\keep-alive.ps1
+            # Giữ VM chạy vòng lặp
+            for ($i=0; $i -lt 360; $i++) {
+              Start-Sleep -Seconds 60;
+              Write-Host 'Đang giữ VM: ' + $i + ' phút';
+            }
+          "
