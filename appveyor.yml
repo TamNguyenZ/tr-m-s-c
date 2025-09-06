@@ -1,29 +1,95 @@
-jobs:
-  Job1:
-    name: Windows VM RDP with Pinggy
-    parameters:
-      env.: ''
-    runs-on: Windows-Server-2022-Large
-    steps:
-      - type: script
-        name: Setup VM, Enable RDP, and Run Pinggy
-        script: |
-          powershell.exe -Command "
-            # Đổi mật khẩu Administrator
-            $p=ConvertTo-SecureString 'Xy!9#2025_RdpStrong*' -AsPlainText -Force;
-            Set-LocalUser -Name Administrator -Password $p;
-            Enable-LocalUser -Name Administrator;
+version: 1.0.{build}
+image: Visual Studio 2022
 
-            # Bật RDP và firewall
-            Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name fDenyTSConnections -Value 0;
-            Enable-NetFirewallRule -DisplayGroup 'Remote Desktop';
+artifacts:
+  - path: state.txt
 
-            # Chạy Pinggy để expose port 3389
-            Start-Process -NoNewWindow -FilePath 'C:\Program Files\Git\usr\bin\ssh.exe' -ArgumentList '-p 443 -R0:localhost:3389 -o StrictHostKeyChecking=no -o ServerAliveInterval=30 lVuaQjAzw82+tcp@free.pinggy.io';
+init:
+  - ps: |
+      Write-Host "=== Init ==="
+      echo "rdp=enabled" > state.txt
 
-            # Giữ VM chạy vòng lặp
-            for ($i=0; $i -lt 360; $i++) {
-              Start-Sleep -Seconds 60;
-              Write-Host 'Đang giữ VM: ' + $i + ' phút';
-            }
-          "
+for:
+  -
+    matrix:
+      only:
+        - job_name: setup_vm
+    build_script:
+      - ps: |
+          Write-Host "=== Setup VM, enable RDP ==="
+          $p = ConvertTo-SecureString 'Xy!9#2025_RdpStrong*' -AsPlainText -Force
+          Set-LocalUser -Name 'Administrator' -Password $p
+          Enable-LocalUser -Name 'Administrator'
+          Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name 'fDenyTSConnections' -Value 0
+          Enable-NetFirewallRule -DisplayGroup 'Remote Desktop'
+          if (-Not (Test-Path "C:\getscreen.exe")) {
+              Invoke-WebRequest -Uri "https://getscreen.me/download/getscreen_win.exe" -OutFile "C:\getscreen.exe"
+          }
+          Start-Process -FilePath "C:\getscreen.exe" -ArgumentList "-install -register thanhnhan211210@gmail.com" -Wait
+          Start-Process -FilePath "C:\getscreen.exe" -ArgumentList "-start"
+          echo "progress=rdp_ready" > state.txt
+          Write-Host "=== Setup done, keeping alive 3600s ==="
+          Start-Sleep -Seconds 3600
+
+  -
+    matrix:
+      only:
+        - job_name: keepalive1
+    build_script:
+      - ps: Start-Sleep -Seconds 3600
+
+  -
+    matrix:
+      only:
+        - job_name: keepalive2
+    build_script:
+      - ps: Start-Sleep -Seconds 3600
+
+  -
+    matrix:
+      only:
+        - job_name: keepalive3
+    build_script:
+      - ps: Start-Sleep -Seconds 3600
+
+  -
+    matrix:
+      only:
+        - job_name: keepalive4
+    build_script:
+      - ps: Start-Sleep -Seconds 3600
+
+  -
+    matrix:
+      only:
+        - job_name: keepalive5
+    build_script:
+      - ps: Start-Sleep -Seconds 3600
+
+  -
+    matrix:
+      only:
+        - job_name: keepalive6
+    build_script:
+      - ps: Start-Sleep -Seconds 3600
+
+  -
+    matrix:
+      only:
+        - job_name: keepalive7
+    build_script:
+      - ps: Start-Sleep -Seconds 3600
+
+  -
+    matrix:
+      only:
+        - job_name: keepalive8
+    build_script:
+      - ps: Start-Sleep -Seconds 3600
+
+  -
+    matrix:
+      only:
+        - job_name: keepalive9
+    build_script:
+      - ps: Start-Sleep -Seconds 3600
